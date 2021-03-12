@@ -1,0 +1,49 @@
+version: 2
+jobs:
+  Build-and-Push:
+    docker:
+      - image: docker:18.06.1-ce-git
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --update --no-cache curl py-pip jq make git
+            pip install awscli
+      - run: 
+          name: Build image and push
+          command: |
+            make docker-build-image
+            make publish
+  Deployment:
+    docker:
+      - image: docker:18.06.1-ce-git
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --update --no-cache curl py-pip jq make git
+            pip install awscli
+      - run: 
+          name: Deploy Service
+          command:  |
+            make deploy-service            
+workflows: 
+  version: 2
+  build_and_deploy:
+    jobs:
+      - Build-and-Push:
+          filters:
+            branches:
+              only: master
+          context: development
+      - Deployment:
+          requires:
+            - Build-and-Push
+          filters:
+            branches:
+              only: master
+          context: development
